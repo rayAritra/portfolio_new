@@ -26,6 +26,20 @@ export function LinkedinIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+export function HashnodeIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 337 337"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path fillRule="evenodd" clipRule="evenodd" d="M168.5 0C75.395 0 0 75.395 0 168.5S75.395 337 168.5 337 337 261.605 337 168.5 261.605 0 168.5 0zm-17.583 94.752a104.073 104.073 0 0 1 35.166 0 104.073 104.073 0 0 1 88.412 88.413 104.076 104.076 0 0 1 0 35.166 104.073 104.073 0 0 1-88.412 88.413 104.073 104.073 0 0 1-35.166 0 104.073 104.073 0 0 1-88.413-88.413 104.076 104.076 0 0 1 0-35.166 104.073 104.073 0 0 1 88.413-88.413zm-8.938 90.956a26.031 26.031 0 1 0 36.8 36.8 26.031 26.031 0 0 0-36.8-36.8z" />
+    </svg>
+  );
+}
+
 export function XIcon({ size = 16 }: { size?: number }) {
   return (
     <svg

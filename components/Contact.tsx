@@ -1,21 +1,112 @@
 "use client";
 
-import { useState } from "react";
-import { Mail, Phone, MapPin, Copy, Check, ExternalLink } from "lucide-react";
-import { GithubIcon, LinkedinIcon, XIcon } from "./SocialIcons";
+import { useState, useEffect } from "react";
+import emailjs from "@emailjs/browser";
+import { Mail, Phone, MapPin, Copy, Check, ExternalLink, Send, Loader } from "lucide-react";
+import { GithubIcon, LinkedinIcon, HashnodeIcon, XIcon } from "./SocialIcons";
 import TerminalWindow from "./TerminalWindow";
 import { useFadeUp } from "./useFadeUp";
 
 const EMAIL = "aritra.sohan@gmail.com";
+const EJS_SVC = "service_bqafw29";
+const EJS_TPL = "template_4m62rge";
+const EJS_KEY = "Tjzxz1nsQO6biXp0_";
+
+type FormState = "idle" | "sending" | "success" | "error";
+
+const SOCIAL = [
+  {
+    Icon: GithubIcon,
+    label: "GitHub",
+    handle: "github.com/rayAritra",
+    href: "https://github.com/rayAritra",
+    color: "var(--text-primary)",
+  },
+  {
+    Icon: LinkedinIcon,
+    label: "LinkedIn",
+    handle: "linkedin.com/in/aritra-ray",
+    href: "https://linkedin.com/in/aritra-ray",
+    color: "var(--accent-cyan)",
+  },
+  {
+    Icon: XIcon,
+    label: "X / Twitter",
+    handle: "@AritraSohan",
+    href: "https://x.com/AritraSohan",
+    color: "var(--text-primary)",
+  },
+  {
+    Icon: HashnodeIcon,
+    label: "Hashnode",
+    handle: "aritra05.hashnode.dev",
+    href: "https://hashnode.com/@Aritraray2005",
+    color: "var(--accent-purple)",
+  },
+  {
+    Icon: ExternalLink,
+    label: "Live Work",
+    handle: "airedify.in",
+    href: "https://airedify.in",
+    color: "var(--accent-green)",
+  },
+];
 
 export default function Contact() {
   const ref = useFadeUp();
   const [copied, setCopied] = useState(false);
+  const [formState, setFormState] = useState<FormState>("idle");
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [errors, setErrors] = useState<Partial<typeof form>>({});
+
+  // Initialize EmailJS once on mount
+  useEffect(() => {
+    emailjs.init({ publicKey: EJS_KEY });
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(EMAIL);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const validate = () => {
+    const e: Partial<typeof form> = {};
+    if (!form.name.trim()) e.name = "required";
+    if (!form.email.trim()) e.email = "required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "invalid email";
+    if (!form.message.trim()) e.message = "required";
+    return e;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setErrors({});
+    setFormState("sending");
+    try {
+      const response = await emailjs.send(
+        EJS_SVC,
+        EJS_TPL,
+        {
+          from_name: form.name,
+          from_email: form.email,
+          name: form.name,
+          email: form.email,
+          subject: form.subject || "(no subject)",
+          message: form.message,
+          time: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+        },
+      );
+      console.log("EmailJS success:", response.status, response.text);
+      setFormState("success");
+      setForm({ name: "", email: "", subject: "", message: "" });
+    } catch (err: unknown) {
+      const ejs = err as { status?: number; text?: string };
+      console.error("EmailJS error:", ejs.status, ejs.text, JSON.stringify(err));
+      setFormState("error");
+    }
   };
 
   return (
@@ -27,280 +118,390 @@ export default function Contact() {
         <div className="section-heading">contact.sh</div>
 
         <TerminalWindow filename="contact.sh">
-          {/* Prompt */}
-          <div className="prompt-line" style={{ marginBottom: "20px" }}>
+          <div className="prompt-line" style={{ marginBottom: "24px" }}>
             <span className="prompt-user">user</span>
             <span className="prompt-sep">@</span>
             <span className="prompt-host">portfolio</span>
             <span className="prompt-sep">:~$</span>
             <span className="prompt-dollar" />
-            <span className="prompt-command">./contact.sh --help</span>
+            <span className="prompt-command">./contact.sh --interactive</span>
           </div>
 
+          {/* ── Row 1: info cards + form ── */}
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "32px",
-            }}
-            className="contact-grid"
+            className="contact-top"
+            style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "28px", marginBottom: "28px" }}
           >
-            {/* Left: info */}
-            <div>
-              <div className="comment" style={{ marginBottom: "12px" }}>
-                # Get in touch for collaborations and opportunities
+            {/* Left: contact info */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div className="comment" style={{ marginBottom: "4px" }}>
+                # Get in touch
               </div>
 
+              {/* Email */}
               <div
                 style={{
-                  fontSize: "1.2rem",
-                  fontWeight: 700,
-                  color: "var(--accent-cyan)",
-                  marginBottom: "8px",
+                  background: "var(--bg-tertiary)", border: "1px solid var(--border-color)",
+                  borderRadius: "8px", padding: "12px 14px",
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
                 }}
               >
-                ## Let&apos;s Work Together
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <Mail size={13} style={{ color: "var(--accent-cyan)" }} />
+                  <div>
+                    <div style={{ fontSize: "0.65rem", color: "var(--text-secondary)" }}>Email</div>
+                    <a
+                      href={`mailto:${EMAIL}`}
+                      style={{ fontSize: "0.8rem", color: "var(--text-primary)", textDecoration: "none" }}
+                    >
+                      {EMAIL}
+                    </a>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCopy}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: copied ? "var(--accent-green)" : "var(--text-secondary)",
+                    transition: "color 0.2s", display: "flex", alignItems: "center",
+                  }}
+                  aria-label="Copy email"
+                >
+                  {copied ? <Check size={13} /> : <Copy size={13} />}
+                </button>
               </div>
 
-              <p
+              {/* Phone */}
+              <div
                 style={{
-                  fontSize: "0.82rem",
-                  color: "var(--text-secondary)",
-                  lineHeight: 1.7,
-                  marginBottom: "24px",
+                  background: "var(--bg-tertiary)", border: "1px solid var(--border-color)",
+                  borderRadius: "8px", padding: "12px 14px",
+                  display: "flex", alignItems: "center", gap: "10px",
                 }}
               >
-                I&apos;m open to full-time roles, internships, freelance projects, or just
-                a conversation about full-stack development, real-time systems, or
-                building things that scale.
-              </p>
+                <Phone size={13} style={{ color: "var(--accent-green)" }} />
+                <div>
+                  <div style={{ fontSize: "0.65rem", color: "var(--text-secondary)" }}>Phone</div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-primary)" }}>+91 9732811889</div>
+                </div>
+              </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {/* Email */}
-                <div
-                  style={{
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "8px",
-                    padding: "14px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Mail size={14} style={{ color: "var(--accent-cyan)" }} />
-                    <div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)" }}>
-                        Email
-                      </div>
-                      <a
-                        href={`mailto:${EMAIL}`}
-                        style={{
-                          fontSize: "0.82rem",
-                          color: "var(--text-primary)",
-                          textDecoration: "none",
-                        }}
-                      >
-                        {EMAIL}
-                      </a>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleCopy}
+              {/* Location */}
+              <div
+                style={{
+                  background: "var(--bg-tertiary)", border: "1px solid var(--border-color)",
+                  borderRadius: "8px", padding: "12px 14px",
+                  display: "flex", alignItems: "center", gap: "10px",
+                }}
+              >
+                <MapPin size={13} style={{ color: "var(--accent-yellow)" }} />
+                <div>
+                  <div style={{ fontSize: "0.65rem", color: "var(--text-secondary)" }}>Location</div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-primary)" }}>Kolkata, West Bengal, India</div>
+                </div>
+              </div>
+
+              {/* Availability */}
+              <div
+                style={{
+                  padding: "12px 14px", background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-color)", borderRadius: "8px",
+                  borderLeft: "3px solid var(--accent-green)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+                  <div
                     style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: copied ? "var(--accent-green)" : "var(--text-secondary)",
-                      transition: "color 0.2s",
-                      display: "flex",
-                      alignItems: "center",
+                      width: "7px", height: "7px", borderRadius: "50%",
+                      background: "var(--accent-green)", animation: "blink 2s ease infinite",
                     }}
-                    aria-label="Copy email"
-                  >
-                    {copied ? <Check size={14} /> : <Copy size={14} />}
-                  </button>
+                  />
+                  <span style={{ fontSize: "0.78rem", color: "var(--accent-green)", fontWeight: 600 }}>
+                    Available for opportunities
+                  </span>
                 </div>
-
-                {/* Phone */}
-                <div
-                  style={{
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "8px",
-                    padding: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}
-                >
-                  <Phone size={14} style={{ color: "var(--accent-green)" }} />
-                  <div>
-                    <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)" }}>
-                      Phone
-                    </div>
-                    <div style={{ fontSize: "0.82rem", color: "var(--text-primary)" }}>
-                      +91 9732811889
-                    </div>
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div
-                  style={{
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "8px",
-                    padding: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}
-                >
-                  <MapPin size={14} style={{ color: "var(--accent-yellow)" }} />
-                  <div>
-                    <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)" }}>
-                      Location
-                    </div>
-                    <div style={{ fontSize: "0.82rem", color: "var(--text-primary)" }}>
-                      Kolkata, West Bengal, India
-                    </div>
-                  </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+                  Open to full-time, internship &amp; freelance
                 </div>
               </div>
             </div>
 
-            {/* Right: social links */}
+            {/* Right: form */}
             <div>
-              <div
-                style={{
-                  fontSize: "0.8rem",
-                  color: "var(--accent-yellow)",
-                  marginBottom: "16px",
-                }}
-              >
-                $ ls social/
+              <div style={{ fontSize: "0.78rem", color: "var(--accent-yellow)", marginBottom: "12px" }}>
+                $ ./send-message.sh
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {[
-                  {
-                    Icon: GithubIcon,
-                    label: "GitHub",
-                    handle: "github.com/rayAritra",
-                    href: "https://github.com/rayAritra",
-                    color: "var(--text-primary)",
-                  },
-                  {
-                    Icon: LinkedinIcon,
-                    label: "LinkedIn",
-                    handle: "linkedin.com/in/aritra-ray",
-                    href: "https://linkedin.com/in/aritra-ray",
-                    color: "var(--accent-cyan)",
-                  },
-                  {
-                    Icon: ExternalLink,
-                    label: "Live Work",
-                    handle: "airedify.in",
-                    href: "https://airedify.in",
-                    color: "var(--accent-green)",
-                  },
-                ].map(({ Icon, label, handle, href, color }) => (
-                  <a
-                    key={label}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
+              {formState === "success" ? (
+                <div
+                  style={{
+                    background: "var(--bg-tertiary)", border: "1px solid var(--accent-green)",
+                    borderRadius: "8px", padding: "24px",
+                  }}
+                >
+                  <div style={{ fontSize: "0.82rem", color: "var(--accent-green)", marginBottom: "8px", fontWeight: 700 }}>
+                    ✓ Message sent successfully
+                  </div>
+                  <div className="comment" style={{ marginBottom: "16px" }}>
+                    # I&apos;ll get back to you as soon as possible
+                  </div>
+                  <div style={{ fontFamily: "inherit", fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                    <span style={{ color: "var(--accent-green)" }}>aritra</span>
+                    <span style={{ color: "var(--text-secondary)" }}>@portfolio:~$ </span>
+                    <span style={{ color: "var(--text-primary)" }}>echo &quot;Thanks for reaching out!&quot;</span>
+                    <br />
+                    <span style={{ color: "var(--accent-cyan)" }}>Thanks for reaching out!</span>
+                  </div>
+                  <button
+                    onClick={() => setFormState("idle")}
                     style={{
-                      background: "var(--bg-tertiary)",
-                      border: "1px solid var(--border-color)",
-                      borderRadius: "8px",
-                      padding: "14px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      textDecoration: "none",
-                      transition: "border-color 0.2s, background 0.2s",
+                      marginTop: "16px", background: "none",
+                      border: "1px solid var(--border-color)", borderRadius: "6px",
+                      padding: "6px 14px", fontSize: "0.75rem", color: "var(--text-secondary)",
+                      cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.2s, color 0.2s",
                     }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = color;
-                      (e.currentTarget as HTMLElement).style.background = `${color}08`;
+                      (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-cyan)";
+                      (e.currentTarget as HTMLElement).style.color = "var(--accent-cyan)";
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLElement).style.borderColor = "var(--border-color)";
-                      (e.currentTarget as HTMLElement).style.background = "var(--bg-tertiary)";
+                      (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
                     }}
                   >
-                    <Icon size={14} style={{ color }} />
-                    <div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)" }}>
-                        {label}
-                      </div>
-                      <div style={{ fontSize: "0.82rem", color: "var(--text-primary)" }}>
-                        {handle}
-                      </div>
-                    </div>
-                    <ExternalLink
-                      size={12}
-                      style={{ color: "var(--text-secondary)", marginLeft: "auto" }}
+                    $ send --new
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} noValidate>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <FormField
+                      prompt="from_name"
+                      type="text"
+                      placeholder="Your name"
+                      value={form.name}
+                      error={errors.name}
+                      onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+                      onFocus={() => setErrors((e) => ({ ...e, name: undefined }))}
                     />
-                  </a>
-                ))}
-              </div>
+                    <FormField
+                      prompt="from_email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={form.email}
+                      error={errors.email}
+                      onChange={(v) => setForm((f) => ({ ...f, email: v }))}
+                      onFocus={() => setErrors((e) => ({ ...e, email: undefined }))}
+                    />
+                    <FormField
+                      prompt="subject"
+                      type="text"
+                      placeholder="What's this about? (optional)"
+                      value={form.subject}
+                      onChange={(v) => setForm((f) => ({ ...f, subject: v }))}
+                    />
 
-              {/* Terminal output style availability */}
-              <div
-                style={{
-                  marginTop: "20px",
-                  padding: "14px",
-                  background: "var(--bg-tertiary)",
-                  border: "1px solid var(--border-color)",
-                  borderRadius: "8px",
-                  borderLeft: "3px solid var(--accent-green)",
-                }}
-              >
-                <div
+                    {/* Message textarea */}
+                    <div>
+                      <div
+                        style={{
+                          display: "flex", alignItems: "flex-start", gap: "8px",
+                          background: "var(--bg-primary)",
+                          border: `1px solid ${errors.message ? "var(--accent-red)" : "var(--border-color)"}`,
+                          borderRadius: "6px", padding: "10px 12px", transition: "border-color 0.2s",
+                        }}
+                        onFocusCapture={(e) => {
+                          (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-cyan)";
+                          setErrors((er) => ({ ...er, message: undefined }));
+                        }}
+                        onBlurCapture={(e) => {
+                          (e.currentTarget as HTMLElement).style.borderColor =
+                            errors.message ? "var(--accent-red)" : "var(--border-color)";
+                        }}
+                      >
+                        <span style={{ fontSize: "0.78rem", color: "var(--accent-green)", flexShrink: 0, paddingTop: "1px" }}>
+                          &gt; message:
+                        </span>
+                        <textarea
+                          placeholder="Your message..."
+                          rows={4}
+                          value={form.message}
+                          onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+                          style={{
+                            flex: 1, background: "none", border: "none", outline: "none",
+                            color: "var(--text-primary)", fontFamily: "inherit",
+                            fontSize: "0.82rem", resize: "vertical", lineHeight: 1.6,
+                          }}
+                        />
+                      </div>
+                      {errors.message && (
+                        <div style={{ fontSize: "0.68rem", color: "var(--accent-red)", marginTop: "3px", paddingLeft: "4px" }}>
+                          # error: message {errors.message}
+                        </div>
+                      )}
+                    </div>
+
+                    {formState === "error" && (
+                      <div
+                        style={{
+                          padding: "10px 14px", background: "rgba(248,81,73,0.08)",
+                          border: "1px solid var(--accent-red)", borderRadius: "6px",
+                          fontSize: "0.78rem", color: "var(--accent-red)",
+                        }}
+                      >
+                        ✗ Error: Failed to send. Check your connection and try again.
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={formState === "sending"}
+                      style={{
+                        marginTop: "2px", width: "100%",
+                        background: formState === "sending" ? "rgba(125,207,255,0.05)" : "rgba(125,207,255,0.1)",
+                        border: "1px solid var(--accent-cyan)", color: "var(--accent-cyan)",
+                        borderRadius: "6px", padding: "10px 20px", fontFamily: "inherit",
+                        fontSize: "0.85rem", cursor: formState === "sending" ? "not-allowed" : "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                        transition: "background 0.2s, box-shadow 0.2s",
+                        opacity: formState === "sending" ? 0.7 : 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formState !== "sending") {
+                          (e.currentTarget as HTMLElement).style.background = "rgba(125,207,255,0.2)";
+                          (e.currentTarget as HTMLElement).style.boxShadow = "0 0 15px rgba(125,207,255,0.2)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "rgba(125,207,255,0.1)";
+                        (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                      }}
+                    >
+                      {formState === "sending" ? (
+                        <><Loader size={14} style={{ animation: "spin 1s linear infinite" }} />Sending...</>
+                      ) : (
+                        <><Send size={14} />$ send-message --execute</>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* ── Row 2: social links (full width) ── */}
+          <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: "20px" }}>
+            <div style={{ fontSize: "0.78rem", color: "var(--accent-yellow)", marginBottom: "12px" }}>
+              $ ls social/
+            </div>
+            <div className="social-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
+              {SOCIAL.map(({ Icon, label, handle, href, color }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "4px",
+                    background: "var(--bg-tertiary)", border: "1px solid var(--border-color)",
+                    borderRadius: "8px", padding: "12px",
+                    display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "8px",
+                    textDecoration: "none", transition: "border-color 0.2s, background 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = color;
+                    (e.currentTarget as HTMLElement).style.background = `${color}10`;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = "var(--border-color)";
+                    (e.currentTarget as HTMLElement).style.background = "var(--bg-tertiary)";
                   }}
                 >
-                  <div
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      background: "var(--accent-green)",
-                      animation: "blink 2s ease infinite",
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "var(--accent-green)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Available for opportunities
-                  </span>
-                </div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                  Open to full-time, internship &amp; freelance roles
-                </div>
-              </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                    <Icon size={14} style={{ color }} />
+                    <ExternalLink size={10} style={{ color: "var(--text-secondary)" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
+                      {label}
+                    </div>
+                    <div style={{ fontSize: "0.65rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "140px" }}>
+                      {handle}
+                    </div>
+                  </div>
+                </a>
+              ))}
             </div>
           </div>
         </TerminalWindow>
       </div>
 
       <style>{`
+        @media (max-width: 900px) {
+          .contact-top { grid-template-columns: 1fr !important; }
+        }
         @media (max-width: 768px) {
-          .contact-grid { grid-template-columns: 1fr !important; }
+          .social-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (max-width: 480px) {
+          .social-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
         }
       `}</style>
     </section>
+  );
+}
+
+function FormField({
+  prompt, type, placeholder, value, error, onChange, onFocus,
+}: {
+  prompt: string;
+  type: string;
+  placeholder: string;
+  value: string;
+  error?: string;
+  onChange: (v: string) => void;
+  onFocus?: () => void;
+}) {
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: "8px",
+          background: "var(--bg-primary)",
+          border: `1px solid ${error ? "var(--accent-red)" : "var(--border-color)"}`,
+          borderRadius: "6px", padding: "9px 12px", transition: "border-color 0.2s",
+        }}
+        onFocusCapture={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-cyan)";
+          onFocus?.();
+        }}
+        onBlurCapture={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor =
+            error ? "var(--accent-red)" : "var(--border-color)";
+        }}
+      >
+        <span style={{ fontSize: "0.78rem", color: "var(--accent-green)", flexShrink: 0, whiteSpace: "nowrap" }}>
+          &gt; {prompt}:
+        </span>
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            flex: 1, background: "none", border: "none", outline: "none",
+            color: "var(--text-primary)", fontFamily: "inherit", fontSize: "0.82rem",
+          }}
+        />
+      </div>
+      {error && (
+        <div style={{ fontSize: "0.68rem", color: "var(--accent-red)", marginTop: "3px", paddingLeft: "4px" }}>
+          # error: {prompt} {error}
+        </div>
+      )}
+    </div>
   );
 }

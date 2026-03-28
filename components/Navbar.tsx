@@ -10,6 +10,7 @@ const navItems = [
   { label: "ls projects/", terminal: "ls projects/", href: "#projects" },
   { label: "ls highlights/", terminal: "ls highlights/", href: "#highlights" },
   { label: "cat achievements.json", terminal: "cat achievements.json", href: "#achievements" },
+  { label: "cat blog.md", terminal: "cat blog.md", href: "#writing" },
   { label: "mail contact", terminal: "mail contact", href: "#contact" },
 ];
 
@@ -117,6 +118,7 @@ export default function Navbar() {
             {[
               { Icon: GithubIcon, href: "https://github.com/rayAritra", label: "GitHub" },
               { Icon: LinkedinIcon, href: "https://linkedin.com/in/aritra-ray", label: "LinkedIn" },
+              { Icon: XIcon, href: "https://x.com/AritraSohan", label: "X / Twitter" },
             ].map(({ Icon, href, label }) => (
               <a
                 key={label}
