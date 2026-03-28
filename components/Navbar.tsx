@@ -117,7 +117,7 @@ export default function Navbar() {
           <div className="social-icons" style={{ display: "flex", gap: "8px" }}>
             {[
               { Icon: GithubIcon, href: "https://github.com/rayAritra", label: "GitHub" },
-              { Icon: LinkedinIcon, href: "https://linkedin.com/in/aritra-ray", label: "LinkedIn" },
+              { Icon: LinkedinIcon, href: "https://www.linkedin.com/in/aritra-ray-236681293/", label: "LinkedIn" },
               { Icon: XIcon, href: "https://x.com/AritraSohan", label: "X / Twitter" },
             ].map(({ Icon, href, label }) => (
               <a

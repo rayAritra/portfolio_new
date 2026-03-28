@@ -25,8 +25,8 @@ const SOCIAL = [
   {
     Icon: LinkedinIcon,
     label: "LinkedIn",
-    handle: "linkedin.com/in/aritra-ray",
-    href: "https://linkedin.com/in/aritra-ray",
+    handle: "linkedin.com/in/aritra-ray-236681293",
+    href: "https://www.linkedin.com/in/aritra-ray-236681293/",
     color: "var(--accent-cyan)",
   },
   {

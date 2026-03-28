@@ -1,0 +1,496 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+
+/* ── command definitions ───────────────────────────────────────── */
+type Line = { text: string; color?: string; indent?: boolean };
+type HistoryEntry = { id: number; cmd: string; output: Line[]; live?: "clock" };
+
+const BOOT: Line[] = [
+  { text: "╔══════════════════════════════════════════════╗", color: "var(--accent-cyan)" },
+  { text: "║         npx aritra  •  v2.0.0-dev            ║", color: "var(--accent-cyan)" },
+  { text: "╚══════════════════════════════════════════════╝", color: "var(--accent-cyan)" },
+  { text: "" },
+  { text: "Welcome to Aritra Ray's interactive portfolio CLI.", color: "var(--text-secondary)" },
+  { text: "Type help to see available commands.", color: "var(--text-secondary)" },
+  { text: "" },
+];
+
+const COMMANDS: Record<string, () => Line[]> = {
+  help: () => [
+    { text: "Available commands:", color: "var(--accent-yellow)" },
+    { text: "" },
+    { text: "  whoami          →  About Aritra", color: "var(--text-primary)" },
+    { text: "  ls projects/    →  List all projects", color: "var(--text-primary)" },
+    { text: "  cat skills.txt  →  Tech stack", color: "var(--text-primary)" },
+    { text: "  cat resume      →  View & download resume", color: "var(--text-primary)" },
+    { text: "  open social/    →  Social links", color: "var(--text-primary)" },
+    { text: "  hire aritra     →  Availability & contact", color: "var(--text-primary)" },
+    { text: "  time            →  Live IST clock", color: "var(--text-primary)" },
+    { text: "  clear           →  Clear terminal", color: "var(--text-primary)" },
+    { text: "  exit            →  Close terminal", color: "var(--text-primary)" },
+    { text: "" },
+  ],
+
+  whoami: () => [
+    { text: "Aritra Ray", color: "var(--accent-cyan)" },
+    { text: "" },
+    { text: "  Role       Full-Stack Developer & CS Student", indent: true, color: "var(--text-primary)" },
+    { text: "  University MAKAUT — B.Tech CSE (Top 20%)", indent: true, color: "var(--text-primary)" },
+    { text: "  Location   Kolkata, West Bengal, India", indent: true, color: "var(--text-primary)" },
+    { text: "  Status     Open to full-time & internship roles", indent: true, color: "var(--accent-green)" },
+    { text: "" },
+    { text: "  1+ yr production experience · 500+ users served", color: "var(--text-secondary)" },
+    { text: "  Diversion Hackathon Finalist — Top 10 / 200+ teams", color: "var(--text-secondary)" },
+    { text: "" },
+  ],
+
+  "ls projects/": () => [
+    { text: "drwxr-xr-x  projects/", color: "var(--accent-yellow)" },
+    { text: "" },
+    { text: "  lumio.sh          Browser-based IDE (WebContainers + AI)", color: "var(--accent-cyan)" },
+    { text: "  airedify.sh       EdTech platform · 500+ students · Live", color: "var(--accent-green)" },
+    { text: "  uber_clone.sh     Real-time ride hailing (Socket.IO)", color: "var(--text-primary)" },
+    { text: "  chess_game.sh     Multiplayer chess (WebSockets)", color: "var(--text-primary)" },
+    { text: "  reviewiq.sh       AI SaaS · Hackathon Finalist · 24h build", color: "var(--accent-yellow)" },
+    { text: "" },
+    { text: "  → github.com/rayAritra", color: "var(--text-secondary)" },
+    { text: "" },
+  ],
+
+  "cat skills.txt": () => [
+    { text: "# Tech Stack", color: "var(--text-secondary)" },
+    { text: "" },
+    { text: "  Languages    TypeScript · JavaScript · SQL", color: "var(--text-primary)" },
+    { text: "  Frontend     React 18 · Next.js 14 · Tailwind CSS", color: "var(--accent-cyan)" },
+    { text: "  Backend      Node.js · Express · Prisma · REST · WebSockets", color: "var(--accent-green)" },
+    { text: "  Databases    MongoDB · PostgreSQL", color: "var(--accent-yellow)" },
+    { text: "  Auth         JWT · Auth0 · RBAC", color: "var(--text-primary)" },
+    { text: "  Cloud        AWS SES · Vercel · Docker", color: "var(--accent-purple)" },
+    { text: "  Payments     Razorpay (webhooks · orders · verification)", color: "var(--accent-orange)" },
+    { text: "  AI           Gemini AI · WebContainers API", color: "var(--accent-cyan)" },
+    { text: "" },
+  ],
+
+  "cat resume": () => [
+    { text: "# Aritra Ray — Resume", color: "var(--accent-cyan)" },
+    { text: "" },
+    { text: "  Education   B.Tech CSE · MAKAUT · Expected Apr 2027", color: "var(--text-primary)" },
+    { text: "  Experience  Full-Stack Dev @ AiRedify (Jan 2024 – Present)", color: "var(--text-primary)" },
+    { text: "  Highlight   Diversion Hackathon Finalist · Top 10 / 200+", color: "var(--accent-yellow)" },
+    { text: "" },
+    { text: "  Downloading resume...", color: "var(--accent-green)" },
+    { text: "  ✓ aritra_ray_resume.pdf", color: "var(--accent-green)" },
+    { text: "" },
+  ],
+
+  "open social/": () => [
+    { text: "# Social Links", color: "var(--text-secondary)" },
+    { text: "" },
+    { text: "  GitHub     github.com/rayAritra", color: "var(--text-primary)" },
+    { text: "  LinkedIn   linkedin.com/in/aritra-ray-236681293", color: "var(--accent-cyan)" },
+    { text: "  X          x.com/AritraSohan", color: "var(--text-primary)" },
+    { text: "  Hashnode   aritra05.hashnode.dev", color: "var(--accent-purple)" },
+    { text: "  Live Work  airedify.in", color: "var(--accent-green)" },
+    { text: "" },
+  ],
+
+  time: () => [
+    { text: "# Live clock — IST (UTC+5:30)", color: "var(--text-secondary)" },
+    { text: "" },
+  ],
+
+  "hire aritra": () => [
+    { text: "┌─────────────────────────────────────────┐", color: "var(--accent-green)" },
+    { text: "│  ●  AVAILABLE FOR OPPORTUNITIES         │", color: "var(--accent-green)" },
+    { text: "└─────────────────────────────────────────┘", color: "var(--accent-green)" },
+    { text: "" },
+    { text: "  Open to:", color: "var(--text-secondary)" },
+    { text: "  ✓  Full-time roles", color: "var(--accent-green)" },
+    { text: "  ✓  Internships", color: "var(--accent-green)" },
+    { text: "  ✓  Freelance projects", color: "var(--accent-green)" },
+    { text: "  ✓  Open-source collaborations", color: "var(--accent-green)" },
+    { text: "" },
+    { text: "  Email   aritra.sohan@gmail.com", color: "var(--accent-cyan)" },
+    { text: "  Phone   +91 9732811889", color: "var(--text-primary)" },
+    { text: "" },
+    { text: "  → Scroll to Contact section to send a message", color: "var(--text-secondary)" },
+    { text: "" },
+  ],
+};
+
+const SUGGESTIONS = Object.keys(COMMANDS);
+
+/* ── live clock ────────────────────────────────────────────────── */
+function LiveClock() {
+  const [time, setTime] = useState(() =>
+    new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })
+  );
+  const [date, setDate] = useState(() =>
+    new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", year: "numeric", month: "long", day: "numeric" })
+  );
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      const now = new Date();
+      setTime(now.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour12: true }));
+      setDate(now.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", year: "numeric", month: "long", day: "numeric" }));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  return (
+    <div style={{ paddingLeft: "0", marginBottom: "4px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: "16px", flexWrap: "wrap" }}>
+        <span style={{
+          fontSize: "1.6rem",
+          fontWeight: 800,
+          color: "var(--accent-cyan)",
+          letterSpacing: "0.05em",
+          textShadow: "0 0 20px rgba(125,207,255,0.5)",
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          {time}
+        </span>
+        <span style={{ fontSize: "0.72rem", color: "var(--accent-green)", letterSpacing: "0.05em" }}>
+          IST / UTC+5:30
+        </span>
+      </div>
+      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+        {date}
+      </div>
+      <div style={{ fontSize: "0.65rem", color: "var(--text-secondary)", marginTop: "8px", opacity: 0.6 }}>
+        # clock updates every second
+      </div>
+      <div style={{ marginTop: "4px" }} />
+    </div>
+  );
+}
+
+/* ── component ─────────────────────────────────────────────────── */
+
+export default function NpxTerminal() {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [cmdHistory, setCmdHistory] = useState<string[]>([]);
+  const [cmdIdx, setCmdIdx] = useState(-1);
+  const [suggestion, setSuggestion] = useState("");
+  const [idCounter, setIdCounter] = useState(0);
+
+  const inputRef   = useRef<HTMLInputElement>(null);
+  const bottomRef  = useRef<HTMLDivElement>(null);
+  const openRef    = useRef(false);
+
+  /* keep ref in sync for key handler */
+  useEffect(() => { openRef.current = open; }, [open]);
+
+  /* backtick toggle */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "`") {
+        e.preventDefault();
+        setOpen((v) => !v);
+      }
+      if (e.key === "Escape" && openRef.current) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  /* focus input when opened */
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 60);
+    }
+  }, [open]);
+
+  /* scroll to bottom on new output */
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [history]);
+
+  /* autocomplete suggestion */
+  useEffect(() => {
+    if (!input.trim()) { setSuggestion(""); return; }
+    const match = SUGGESTIONS.find(
+      (s) => s.startsWith(input) && s !== input
+    );
+    setSuggestion(match ? match.slice(input.length) : "");
+  }, [input]);
+
+  const runCommand = useCallback((raw: string) => {
+    const cmd = raw.trim().toLowerCase();
+    if (!cmd) return;
+
+    setCmdHistory((h) => [cmd, ...h]);
+    setCmdIdx(-1);
+
+    if (cmd === "exit" || cmd === "q") {
+      setOpen(false);
+      return;
+    }
+    if (cmd === "clear") {
+      setHistory([]);
+      setInput("");
+      return;
+    }
+
+    // download resume on cat resume
+    if (cmd === "cat resume") {
+      const a = document.createElement("a");
+      a.href = "/aritra_ray_resume.pdf";
+      a.download = "Aritra_Ray_Resume.pdf";
+      a.click();
+    }
+
+    const fn = COMMANDS[cmd];
+    const isTime = cmd === "time";
+    const output: Line[] = fn
+      ? fn()
+      : [
+          { text: `bash: ${cmd}: command not found`, color: "var(--accent-red)" },
+          { text: 'Type "help" to see available commands.', color: "var(--text-secondary)" },
+          { text: "" },
+        ];
+
+    setIdCounter((n) => {
+      const id = n + 1;
+      setHistory((h) => [...h, { id, cmd: raw.trim(), output, live: isTime ? "clock" : undefined }]);
+      return id;
+    });
+    setInput("");
+    setSuggestion("");
+  }, []);
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      runCommand(input);
+      return;
+    }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (suggestion) setInput(input + suggestion);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const next = Math.min(cmdIdx + 1, cmdHistory.length - 1);
+      setCmdIdx(next);
+      setInput(cmdHistory[next] ?? "");
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = Math.max(cmdIdx - 1, -1);
+      setCmdIdx(next);
+      setInput(next === -1 ? "" : cmdHistory[next] ?? "");
+      return;
+    }
+  };
+
+  if (!open) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          bottom: "80px",
+          right: "24px",
+          zIndex: 300,
+          background: "rgba(22,27,34,0.92)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "8px",
+          padding: "6px 12px",
+          fontSize: "0.68rem",
+          color: "var(--text-secondary)",
+          backdropFilter: "blur(12px)",
+          pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+        }}
+      >
+        <span style={{ color: "var(--accent-cyan)" }}>›</span>
+        press <kbd style={{
+          background: "var(--bg-tertiary)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "3px",
+          padding: "1px 5px",
+          color: "var(--text-primary)",
+          fontFamily: "inherit",
+        }}>`</kbd> to open terminal
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.65)",
+        backdropFilter: "blur(4px)",
+        animation: "fadeUp 0.18s ease",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+    >
+      <div
+        style={{
+          width: "min(720px, 95vw)",
+          height: "min(500px, 80vh)",
+          background: "var(--bg-secondary)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "12px",
+          boxShadow: "0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(125,207,255,0.08)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          fontFamily: "inherit",
+        }}
+      >
+        {/* title bar */}
+        <div
+          style={{
+            background: "var(--bg-tertiary)",
+            borderBottom: "1px solid var(--border-color)",
+            padding: "10px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--accent-red)", cursor: "pointer" }}
+            onClick={() => setOpen(false)}
+          />
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--accent-yellow)" }} />
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--accent-green)" }} />
+          <span
+            style={{
+              flex: 1,
+              textAlign: "center",
+              fontSize: "0.75rem",
+              color: "var(--text-secondary)",
+              paddingRight: "36px",
+            }}
+          >
+            npx aritra — interactive portfolio CLI
+          </span>
+        </div>
+
+        {/* output area */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px 20px",
+            fontSize: "0.82rem",
+            lineHeight: 1.7,
+          }}
+        >
+          {/* boot message */}
+          {BOOT.map((line, i) => (
+            <div key={`boot-${i}`} style={{ color: line.color ?? "var(--text-primary)", whiteSpace: "pre" }}>
+              {line.text}
+            </div>
+          ))}
+
+          {/* command history */}
+          {history.map((entry) => (
+            <div key={entry.id}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                <span style={{ color: "var(--accent-green)" }}>aritra</span>
+                <span style={{ color: "var(--text-secondary)" }}>@portfolio</span>
+                <span style={{ color: "var(--text-secondary)" }}>:~$</span>
+                <span style={{ color: "var(--text-primary)" }}>{entry.cmd}</span>
+              </div>
+              {entry.output.map((line, i) => (
+                <div
+                  key={i}
+                  style={{
+                    color: line.color ?? "var(--text-primary)",
+                    paddingLeft: line.indent ? "4px" : "0",
+                    whiteSpace: "pre",
+                  }}
+                >
+                  {line.text}
+                </div>
+              ))}
+              {entry.live === "clock" && <LiveClock />}
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* input row */}
+        <div
+          style={{
+            borderTop: "1px solid var(--border-color)",
+            padding: "10px 20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            flexShrink: 0,
+            background: "var(--bg-primary)",
+            position: "relative",
+          }}
+        >
+          <span style={{ color: "var(--accent-green)", fontSize: "0.82rem", whiteSpace: "nowrap" }}>
+            aritra@portfolio:~$
+          </span>
+          <div style={{ flex: 1, position: "relative" }}>
+            {/* ghost suggestion */}
+            {suggestion && (
+              <span
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  pointerEvents: "none",
+                  fontSize: "0.82rem",
+                  color: "transparent",
+                  whiteSpace: "pre",
+                  userSelect: "none",
+                }}
+              >
+                {input}
+                <span style={{ color: "var(--text-secondary)", opacity: 0.45 }}>{suggestion}</span>
+              </span>
+            )}
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="type a command..."
+              spellCheck={false}
+              autoComplete="off"
+              style={{
+                width: "100%",
+                background: "none",
+                border: "none",
+                outline: "none",
+                color: "var(--text-primary)",
+                fontFamily: "inherit",
+                fontSize: "0.82rem",
+                caretColor: "var(--accent-cyan)",
+              }}
+            />
+          </div>
+          {suggestion && (
+            <span style={{ fontSize: "0.65rem", color: "var(--text-secondary)", flexShrink: 0 }}>
+              Tab to complete
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

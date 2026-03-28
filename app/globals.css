@@ -21,6 +21,16 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  cursor: none !important;
+}
+
+input, textarea, select {
+  cursor: text !important;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
 html {

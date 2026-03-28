@@ -218,9 +218,8 @@ export default function Hero() {
                       ./view_projects
                     </a>
                     <a
-                      href="#"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href="/aritra_ray_resume.pdf"
+                      download="Aritra_Ray_Resume.pdf"
                       className="btn-secondary"
                     >
                       <Download size={14} />

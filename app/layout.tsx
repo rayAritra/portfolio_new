@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import TerminalCursor from "@/components/TerminalCursor";
+import NpxTerminal from "@/components/NpxTerminal";
+import ProgressBar from "@/components/ProgressBar";
+import KonamiEasterEgg from "@/components/KonamiEasterEgg";
 
 export const metadata: Metadata = {
   title: "Aritra Ray — Full-Stack Developer & CS Student",
@@ -29,7 +33,13 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <ProgressBar />
+        <TerminalCursor />
+        <NpxTerminal />
+        <KonamiEasterEgg />
+        {children}
+      </body>
     </html>
   );
 }
